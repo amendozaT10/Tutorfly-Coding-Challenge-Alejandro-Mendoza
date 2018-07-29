@@ -47,6 +47,12 @@ class DigitPad extends React.Component {
         </div>
         <div className="pad-row">
           {this.renderCalcButton(16)}
+          {this.renderCalcButton(17)}
+          {this.renderCalcButton(18)}
+          {this.renderCalcButton(19)}
+        </div>
+        <div className="pad-row">
+          {this.renderCalcButton(20)}
         </div>
       </div>
     );
@@ -57,21 +63,14 @@ class Calculator extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      padInput: [
-        1,2,3,'+',
-        4,5,6,'-',
-        7,8,9,'*',
-        '=',0,'.','/',
-        'CLEAR'
-      ],
-      result: 0,
+      result: '0',
       operator: null,
       operand: null,
     }
   }
 
   handleClick(i) {
-    const input = this.state.padInput[i];
+    const input = this.props.padInput[i];
     const result = this.state.result;
     const operator = this.state.operator;
     const operand = this.state.operand;
@@ -80,21 +79,41 @@ class Calculator extends React.Component {
     let newOperator = operator;
     let newOperand = operand;
 
-    if (operator === null) {
+    if (input === 'CLEAR') {
+      newResult = '0'
+      newOperator = null
+      newOperand = null
+    } else if (isFactorial(input)) {
+      newResult = computeFactorial(result)
+      newOperator = null
+      newOperand = null
+    } else if (isSquareRoot(input)) {
+      newResult = computeSquareRoot(result)
+      newOperator = null
+      newOperand = null
+    } 
+    // apply edits to the primary operand
+    else if (operator === null) {
       if (isNumeric(input)) {
-        newResult = this.updateNumericAmount(result, input);
+        newResult = updateAmount(result, input);
       } else if (isOperator(input)) {
         newOperator = input
       } else if (isDecimalPoint(input)) {
-        newResult = this.addDecimalPoint(result);
+        newResult = addDecimalPoint(result);
+      } else if (isSignChange(input)) {
+        newResult = switchSign(result)
       }
-    } else {
+    } 
+    // apply edits to the secondary operand
+    else {
       if (isNumeric(input)) {
-        newOperand = this.updateNumericAmount(operand, input);
+        newOperand = updateAmount(operand, input);
       } else if (isDecimalPoint(input)) {
-
+        newOperand = addDecimalPoint(operand);
       } else if (isOperator(input)) {
         newOperator = input
+      } else if (isSignChange(input)) {
+        newOperand = switchSign(operand)
       } else if (isEquals(input)) {
         newResult = compute(result, operator, operand);
         newOperator = null
@@ -111,55 +130,19 @@ class Calculator extends React.Component {
     );
   }
 
-
-  updateNumericAmount(result, input) {
-    let newResult;
-    let strResult = '' + result
-
-    if (result == null || result === 0) {
-      newResult = input;
-    } 
-    
-    else if (strResult.includes('.')) {
-      var strNewResult = '';
-      strNewResult += result;
-      strNewResult += input;
-      newResult = parseFloat(strNewResult);
-    }
-
-    else {
-      var strNewResult = '';
-      strNewResult += result;
-      strNewResult += input;
-      newResult = parseInt(strNewResult);
-    }
-    return newResult;
-  }
-
-  addDecimalPoint(result) {
-    let strResult = '' + result
-    if (strResult.includes('.')) {
-      // do nothing
-    } else {
-      return parseFloat(strResult)
-    }
-  }
-
   render() {
-    const padInput = this.state.padInput;
-
-    const numToDisplay = (this.state.operand === null) ? this.state.result : this.state.operand;
-
-    const status = '' + numToDisplay;
+    const numToDisplay = (this.state.operand === null) ? 
+    this.state.result : 
+    this.state.operand;
 
     return (
       <div className="calculator">
         <div className="display">
-          <div className="status">{status}</div>
+          <div className="status">{numToDisplay}</div>
         </div>
         <div className="button-pad">
           <DigitPad 
-            padInput={padInput} 
+            padInput={this.props.padInput} 
             onClick={i => this.handleClick(i)}
           />
         </div>
@@ -170,17 +153,28 @@ class Calculator extends React.Component {
 
 // ========================================
 
+const padInput = [
+  '√','^','+/-','!',
+  1,2,3,'+',
+  4,5,6,'-',
+  7,8,9,'*',
+  '=',0,'.','/',
+  'CLEAR'
+]
+
 ReactDOM.render(
-  <Calculator />,
+  <Calculator padInput={padInput} />,
   document.getElementById('root')
 );
+
+// ========================================
 
 function isNumeric(n) {
   return !isNaN(n)
 }
 
 function isOperator(o) {
-  const operators =  ['+', '-', '/', '*'];
+  const operators =  ['+', '-', '/', '*', '^'];
   return operators.includes(o);
 }
 
@@ -192,15 +186,81 @@ function isDecimalPoint(o) {
   return o === '.'
 }
 
+function isSignChange(o) {
+  return o === '+/-'
+}
+
+function isSquareRoot(o) {
+  return o === '√'
+}
+
+function isFactorial(o) {
+  return o === '!'
+}
+
+function switchSign(n) {
+  var strNum = '' + n;
+
+  if (strNum === '0') {
+    return strNum
+  } else if (strNum.includes('-')) {
+    return strNum.substring(1, strNum.length);
+  } else {
+    return '-' + strNum;
+  }
+}
+
+function updateAmount(amount, input) {
+  if (amount === null || amount === '0') {
+    return input;
+  }
+  return parseFloat('' + amount + input);
+}
+
+function addDecimalPoint(result) {
+  let strResult = '' + result
+  if (!strResult.includes('.')) {
+    return strResult + '.';
+  }
+  return result
+}
+
 function compute(result, operator, operand) {
+  let resultNum = parseFloat(result)
+  let operandNum = parseFloat(operand)
+
   switch(operator) {
     case '+':
-      return result + operand;
+      return '' + (resultNum + operandNum);
     case '-':
-      return result - operand;
+      return '' + (resultNum - operandNum);
     case '*':
-      return result * operand;
+      return '' + (resultNum * operandNum);
     case '/':
-      return result / operand;
+      return '' + (resultNum / operandNum);
+    case '^':
+      return '' + Math.pow(resultNum, operandNum);
+    default:
+      return '' + resultNum
+  }
+}
+
+function computeFactorial(num) {
+  if (num < 0) {
+    return -1 * computeFactorial(switchSign(num));
+  }
+
+  let result = 1;
+  for (let i = 1; i <= num; i++) {
+    result = result * i
+  }
+  return result
+}
+
+function computeSquareRoot(num) {
+  if (num >= 0) {
+    return Math.sqrt(num)
+  } else {
+    return "Don't square root negative numbers please."
   }
 }
